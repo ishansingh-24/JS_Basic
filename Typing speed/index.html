@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Speed Test</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* slate-900 */
+      --card: #111827; /* gray-900 */
+      --muted: #94a3b8; /* slate-400 */
+      --text: #e5e7eb; /* gray-200 */
+      --accent: #22c55e; /* green-500 */
+      --accent-2: #60a5fa; /* blue-400 */
+      --error: #ef4444; /* red-500 */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1000px 600px at 20% 0%, #1f2937 0, #0b1120 60%), var(--bg); color: var(--text); min-height: 100vh; display:grid; place-items:center; padding: 24px; }
+    .card { width: min(900px, 95vw); background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); backdrop-filter: blur(6px); }
+    h1 { margin: 0 0 8px; font-weight: 800; letter-spacing: .2px; }
+    .sub { margin: 0 0 20px; color: var(--muted); }
+    .passage { user-select: none; line-height: 1.6; background: rgba(2,6,23,.6); border: 1px solid rgba(148,163,184,.2); padding: 16px; border-radius: 14px; display: grid; gap: 6px; }
+    .row { display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
+    .btn { cursor: pointer; border: 1px solid rgba(148,163,184,.25); background: #0b1220; color: var(--text); padding: 10px 14px; border-radius: 999px; font-weight: 600; transition: transform .06s ease, border-color .2s ease, background .2s ease; }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.35); }
+    .btn.primary { background: linear-gradient(180deg, #1f2937, #0f172a); border-color: rgba(96,165,250,.35); }
+    .btn.ghost { background: transparent; }
+    .stats { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-top: 16px; }
+    .stat { background: rgba(2,6,23,.6); border: 1px solid rgba(148,163,184,.2); padding: 14px; border-radius: 14px; text-align:center; }
+    .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+    .stat .value { font-size: 26px; font-weight: 800; margin-top: 4px; }
+    textarea { width: 100%; min-height: 140px; resize: vertical; background: #0a0f1f; color: var(--text); border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 14px; line-height: 1.5; outline: none; }
+    textarea:focus { border-color: rgba(96,165,250,.5); box-shadow: 0 0 0 3px rgba(96,165,250,.2); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .chip { font: inherit; padding: 2px 10px; border-radius: 999px; border: 1px solid rgba(148,163,184,.25); background: rgba(96,165,250,.1); color: #c7d2fe; }
+    .good { color: var(--accent); }
+    .bad { color: var(--error); }
+    .footer { margin-top: 16px; display:flex; align-items:center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .target { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .kbd { border:1px solid rgba(148,163,184,.35); padding: 2px 6px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Typing Speed Test</h1>
+    <p class="sub">Type the passage below. Your <span class="chip">WPM</span>, <span class="chip">Accuracy</span>, and mistakes update in real time.</p>
+
+    <div class="passage">
+      <div class="row">
+        <strong>Passage:</strong>
+        <button id="shuffle" class="btn ghost" title="Load a different sentence">↻ New sentence</button>
+      </div>
+      <div id="target" class="target"></div>
+      <div class="hint">Don't paste. Start the timer with <span class="kbd">Start</span>, then type. The timer stops automatically when you finish exactly.</div>
+    </div>
+
+    <div class="footer">
+      <div class="row">
+        <button id="start" class="btn primary">Start</button>
+        <button id="reset" class="btn">Reset</button>
+      </div>
+      <div class="row">
+        <span id="status">Idle</span>
+      </div>
+    </div>
+
+    <div style="margin:14px 0;">
+      <textarea id="input" placeholder="Start the test, then type here..." disabled></textarea>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Time</div><div id="time" class="value">0.00s</div></div>
+      <div class="stat"><div class="label">WPM</div><div id="wpm" class="value">0.0</div></div>
+      <div class="stat"><div class="label">Accuracy</div><div id="acc" class="value">100%</div></div>
+      <div class="stat"><div class="label">Errors</div><div id="errs" class="value">0</div></div>
+    </div>
+  </div>
+
+  <script>
+    const sentences = [
+      "Typing is a skill that improves with practice and accuracy matters more than speed.",
+      "Consistency beats intensity when building any long-term skill or habit.",
+      "Measure twice and cut once to avoid unnecessary mistakes and rework.",
+      "Clean code is simple, readable, and does exactly what it needs to do.",
+      "Great communication is as important as great ideas in any team project."
+    ];
+
+    const targetEl = document.getElementById('target');
+    const inputEl = document.getElementById('input');
+    const startBtn = document.getElementById('start');
+    const resetBtn = document.getElementById('reset');
+    const shuffleBtn = document.getElementById('shuffle');
+    const timeEl = document.getElementById('time');
+    const wpmEl = document.getElementById('wpm');
+    const accEl = document.getElementById('acc');
+    const errsEl = document.getElementById('errs');
+    const statusEl = document.getElementById('status');
+
+    let target = sentences[0];
+    let startTime = 0; let timerId = null; let finished = false; let keystrokes = 0;
+
+    function setTarget(text) {
+      target = text;
+      targetEl.innerHTML = '';
+      for (let i = 0; i < text.length; i++) {
+        const span = document.createElement('span');
+        span.textContent = text[i];
+        span.dataset.idx = i;
+        targetEl.appendChild(span);
+      }
+    }
+
+    function pickRandom() {
+      const idx = Math.floor(Math.random() * sentences.length);
+      setTarget(sentences[idx]);
+      reset();
+    }
+
+    function reset() {
+      clearInterval(timerId);
+      timerId = null; finished = false; keystrokes = 0;
+      inputEl.value = '';
+      inputEl.setAttribute('disabled', '');
+      startBtn.disabled = false;
+      updateStats(0);
+      statusEl.textContent = 'Idle';
+      Array.from(targetEl.children).forEach(s => { s.style.color = ''; s.style.background = ''; });
+    }
+
+    function start() {
+      if (timerId) return;
+      finished = false; keystrokes = 0;
+      inputEl.removeAttribute('disabled');
+      inputEl.focus();
+      inputEl.value = '';
+      startTime = performance.now();
+      statusEl.textContent = 'Typing...';
+      timerId = setInterval(() => {
+        const elapsed = (performance.now() - startTime) / 1000;
+        timeEl.textContent = `${elapsed.toFixed(2)}s`;
+        updateStats(elapsed);
+      }, 50);
+    }
+
+    function updateStats(elapsedSeconds) {
+      const text = inputEl.value;
+      const chars = text.length;
+      const minutes = elapsedSeconds / 60;
+      const grossWPM = minutes > 0 ? (chars / 5) / minutes : 0;
+      const {correct, errors} = compare(text, target);
+      const accuracy = chars > 0 ? (correct / Math.max(chars, target.length)) * 100 : 100;
+      wpmEl.textContent = grossWPM.toFixed(1);
+      accEl.textContent = `${Math.max(0, Math.min(100, accuracy)).toFixed(0)}%`;
+      errsEl.textContent = errors;
+    }
+
+    function compare(typed, expected) {
+      let correct = 0, errors = 0;
+      const spans = targetEl.children;
+      const N = expected.length;
+      for (let i = 0; i < N; i++) {
+        const ch = typed[i];
+        const exp = expected[i];
+        const span = spans[i];
+        if (ch == null) {
+          span.style.color = '';
+          span.style.background = '';
+          continue;
+        }
+        if (ch === exp) {
+          correct++;
+          span.style.color = 'var(--accent)';
+          span.style.background = 'rgba(34,197,94,.12)';
+        } else {
+          errors++;
+          span.style.color = 'var(--error)';
+          span.style.background = 'rgba(239,68,68,.12)';
+        }
+      }
+      // extra characters beyond expected count as errors
+      if (typed.length > N) errors += (typed.length - N);
+      return {correct, errors};
+    }
+
+    inputEl.addEventListener('input', () => {
+      if (!timerId) return;
+      keystrokes++;
+      const elapsed = (performance.now() - startTime) / 1000;
+      updateStats(elapsed);
+      if (inputEl.value === target) {
+        finished = true;
+        clearInterval(timerId);
+        timerId = null;
+        const total = (performance.now() - startTime) / 1000;
+        timeEl.textContent = `${total.toFixed(2)}s`;
+        statusEl.textContent = 'Done! ✅';
+        inputEl.setAttribute('disabled', '');
+      }
+    });
+
+    startBtn.addEventListener('click', start);
+    resetBtn.addEventListener('click', reset);
+    shuffleBtn.addEventListener('click', pickRandom);
+
+    // Initialize
+    setTarget(sentences[0]);
+    updateStats(0);
+  </script>
+</body>
+</html>
